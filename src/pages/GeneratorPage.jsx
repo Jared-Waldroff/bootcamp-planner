@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, subDays, isSameDay, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, RefreshCw, Save, CheckCircle, Users, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Save, CheckCircle, Users, Info, Plus, Dumbbell, X } from 'lucide-react';
 import { db } from '../services/db';
 import { cn } from '../lib/utils';
 import { ExerciseDetailModal } from '../components/ExerciseDetailModal';
+import { ExercisePickerModal } from '../components/ExercisePickerModal';
 
 export function GeneratorPage() {
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -12,6 +13,15 @@ export function GeneratorPage() {
     const [isSaved, setIsSaved] = useState(false);
     const [selectedExercise, setSelectedExercise] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Custom Plan State
+    const [isCustomMode, setIsCustomMode] = useState(false);
+    const [customStops, setCustomStops] = useState([
+        { id: '1', stopNumber: 1, waiting: null, main: null },
+        { id: '2', stopNumber: 2, waiting: null, main: null },
+        { id: '3', stopNumber: 3, waiting: null, main: null },
+    ]);
+    const [pickerState, setPickerState] = useState({ isOpen: false, stopIndex: null, type: null });
 
     // Load workout for selected date
     useEffect(() => {
@@ -23,6 +33,12 @@ export function GeneratorPage() {
                 setWorkout(existing);
                 setGeneratedExercises(null);
                 setIsSaved(!!existing);
+                setIsCustomMode(false); // Reset custom mode on date change
+                setCustomStops([
+                    { id: '1', stopNumber: 1, waiting: null, main: null },
+                    { id: '2', stopNumber: 2, waiting: null, main: null },
+                    { id: '3', stopNumber: 3, waiting: null, main: null },
+                ]);
             } catch (error) {
                 console.error("Failed to load workout:", error);
             } finally {
@@ -43,6 +59,7 @@ export function GeneratorPage() {
             const exercises = await db.generateWorkout();
             setGeneratedExercises(exercises);
             setIsSaved(false);
+            setIsCustomMode(false);
         } catch (error) {
             console.error("Failed to generate:", error);
         } finally {
@@ -51,14 +68,26 @@ export function GeneratorPage() {
     };
 
     const handleConfirm = async () => {
-        if (!generatedExercises) return;
+        const exercisesToSave = isCustomMode ? customStops : generatedExercises;
+        if (!exercisesToSave) return;
+
+        // Validate custom plan
+        if (isCustomMode) {
+            const isComplete = customStops.every(stop => stop.waiting && stop.main);
+            if (!isComplete) {
+                alert("Please select exercises for all stops before saving.");
+                return;
+            }
+        }
+
         setIsLoading(true);
         try {
             const dateStr = format(selectedDate, 'yyyy-MM-dd');
-            const saved = await db.saveWorkout(dateStr, generatedExercises);
+            const saved = await db.saveWorkout(dateStr, exercisesToSave);
             setWorkout(saved);
             setGeneratedExercises(null); // Clear pending state
             setIsSaved(true);
+            setIsCustomMode(false);
         } catch (error) {
             console.error("Failed to save:", error);
         } finally {
@@ -66,9 +95,25 @@ export function GeneratorPage() {
         }
     };
 
-    // Display either the saved workout or the pending generated one
-    const displayExercises = generatedExercises || (workout ? workout.exercises : null);
-    const isPending = !!generatedExercises;
+    // Custom Plan Handlers
+    const openPicker = (stopIndex, type) => {
+        setPickerState({ isOpen: true, stopIndex, type });
+    };
+
+    const handleExerciseSelect = (exercise) => {
+        const { stopIndex, type } = pickerState;
+        const newStops = [...customStops];
+        newStops[stopIndex] = {
+            ...newStops[stopIndex],
+            [type]: exercise
+        };
+        setCustomStops(newStops);
+        setPickerState({ isOpen: false, stopIndex: null, type: null });
+    };
+
+    // Display either the saved workout, pending generated one, or custom plan
+    const displayExercises = isCustomMode ? customStops : (generatedExercises || (workout ? workout.exercises : null));
+    const isPending = !!generatedExercises || isCustomMode;
 
     return (
         <>
@@ -105,19 +150,29 @@ export function GeneratorPage() {
                                 <Dumbbell className="w-8 h-8 text-muted-foreground" />
                             </div>
                             <p className="text-muted-foreground">No workout planned for this day.</p>
-                            <button
-                                onClick={handleGenerate}
-                                disabled={isLoading}
-                                className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                            >
-                                {isLoading ? "Generating..." : "Generate Workout"}
-                            </button>
+                            <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
+                                <button
+                                    onClick={handleGenerate}
+                                    disabled={isLoading}
+                                    className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                                >
+                                    {isLoading ? "Generating..." : "Generate Workout"}
+                                </button>
+                                <button
+                                    onClick={() => setIsCustomMode(true)}
+                                    disabled={isLoading}
+                                    className="w-full py-3 bg-muted text-foreground rounded-xl font-semibold text-base hover:bg-muted/80 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    Create Custom Plan
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <>
                             <div className="flex items-center justify-between">
                                 <h2 className="text-lg font-semibold">
-                                    {isPending ? "Preview Workout" : "Planned Workout"}
+                                    {isPending ? (isCustomMode ? "Custom Plan" : "Preview Workout") : "Planned Workout"}
                                 </h2>
                                 {isSaved && !isPending && (
                                     <span className="flex items-center text-green-500 text-sm font-medium bg-green-500/10 px-3 py-1 rounded-full">
@@ -130,7 +185,7 @@ export function GeneratorPage() {
                             <div className="space-y-4">
                                 {displayExercises.map((stop, idx) => {
                                     // Handle legacy data format (if any old workouts exist without 'waiting' key)
-                                    const isLegacy = !stop.waiting;
+                                    const isLegacy = !stop.waiting && !isCustomMode;
 
                                     if (isLegacy) {
                                         return (
@@ -149,41 +204,69 @@ export function GeneratorPage() {
                                             </div>
 
                                             {/* Waiting Exercise */}
-                                            <button
-                                                onClick={() => setSelectedExercise(stop.waiting)}
-                                                className="w-full text-left p-4 border-b hover:bg-muted/50 transition-colors flex justify-between items-start group"
-                                            >
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-orange-500/70 uppercase tracking-wider mb-0.5 block">
-                                                        Waiting
-                                                    </span>
-                                                    <h3 className="font-bold group-hover:text-primary transition-colors">{stop.waiting.name}</h3>
-                                                </div>
-                                                <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                                            </button>
+                                            {isCustomMode && !stop.waiting ? (
+                                                <button
+                                                    onClick={() => openPicker(idx, 'waiting')}
+                                                    className="w-full text-left p-4 border-b hover:bg-muted/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground border-dashed"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    Select Waiting Exercise
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => isCustomMode ? openPicker(idx, 'waiting') : setSelectedExercise(stop.waiting)}
+                                                    className="w-full text-left p-4 border-b hover:bg-muted/50 transition-colors flex justify-between items-start group"
+                                                >
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-orange-500/70 uppercase tracking-wider mb-0.5 block">
+                                                            Waiting
+                                                        </span>
+                                                        <h3 className="font-bold group-hover:text-primary transition-colors">{stop.waiting?.name}</h3>
+                                                    </div>
+                                                    {isCustomMode ? (
+                                                        <RefreshCw className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                                                    ) : (
+                                                        <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                                                    )}
+                                                </button>
+                                            )}
 
                                             {/* Main Exercise */}
-                                            <button
-                                                onClick={() => setSelectedExercise(stop.main)}
-                                                className="w-full text-left p-4 hover:bg-muted/50 transition-colors flex justify-between items-start group"
-                                            >
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-blue-500/70 uppercase tracking-wider mb-0.5 block">
-                                                        Main
-                                                    </span>
-                                                    <h3 className="font-bold group-hover:text-primary transition-colors">{stop.main.name}</h3>
-                                                    <p className="text-xs text-muted-foreground mt-1">{stop.main.category}</p>
-                                                </div>
-                                                <div className="flex flex-col items-end gap-2">
-                                                    <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                                                    {stop.main.partnerExercise && (
-                                                        <div className="flex items-center text-pink-500 bg-pink-500/10 px-2 py-0.5 rounded text-[10px] font-bold">
-                                                            <Users className="w-3 h-3 mr-1" />
-                                                            Partner
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </button>
+                                            {isCustomMode && !stop.main ? (
+                                                <button
+                                                    onClick={() => openPicker(idx, 'main')}
+                                                    className="w-full text-left p-4 hover:bg-muted/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground border-dashed"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                    Select Main Exercise
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => isCustomMode ? openPicker(idx, 'main') : setSelectedExercise(stop.main)}
+                                                    className="w-full text-left p-4 hover:bg-muted/50 transition-colors flex justify-between items-start group"
+                                                >
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-blue-500/70 uppercase tracking-wider mb-0.5 block">
+                                                            Main
+                                                        </span>
+                                                        <h3 className="font-bold group-hover:text-primary transition-colors">{stop.main?.name}</h3>
+                                                        <p className="text-xs text-muted-foreground mt-1">{stop.main?.category}</p>
+                                                    </div>
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        {isCustomMode ? (
+                                                            <RefreshCw className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                                                        ) : (
+                                                            <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                                                        )}
+                                                        {stop.main?.partnerExercise && (
+                                                            <div className="flex items-center text-pink-500 bg-pink-500/10 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                                <Users className="w-3 h-3 mr-1" />
+                                                                Partner
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -194,12 +277,15 @@ export function GeneratorPage() {
                                 {isPending ? (
                                     <>
                                         <button
-                                            onClick={handleGenerate}
+                                            onClick={() => {
+                                                setGeneratedExercises(null);
+                                                setIsCustomMode(false);
+                                            }}
                                             disabled={isLoading}
                                             className="flex-1 py-3 bg-muted text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-muted/80 disabled:opacity-50"
                                         >
-                                            <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                                            Retry
+                                            <X className="w-5 h-5" />
+                                            Cancel
                                         </button>
                                         <button
                                             onClick={handleConfirm}
@@ -228,36 +314,20 @@ export function GeneratorPage() {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modals */}
             <ExerciseDetailModal
                 exercise={selectedExercise}
                 onClose={() => setSelectedExercise(null)}
+            />
+
+            <ExercisePickerModal
+                isOpen={pickerState.isOpen}
+                onClose={() => setPickerState({ ...pickerState, isOpen: false })}
+                onSelect={handleExerciseSelect}
+                type={pickerState.type}
             />
         </>
     );
 }
 
-function Dumbbell({ className }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={className}
-        >
-            <path d="m6.5 6.5 11 11" />
-            <path d="m21 21-1-1" />
-            <path d="m3 3 1 1" />
-            <path d="m18 22 4-4" />
-            <path d="m2 6 4-4" />
-            <path d="m3 10 7-7" />
-            <path d="m14 21 7-7" />
-        </svg>
-    )
-}
+

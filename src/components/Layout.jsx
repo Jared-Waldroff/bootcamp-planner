@@ -26,9 +26,21 @@ export function Layout({ children }) {
     return (
         <div className="flex flex-col min-h-screen bg-background text-foreground">
             <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
-                <div className="flex items-center justify-between h-16 px-4 max-w-md mx-auto w-full">
-                    <h1 className="text-xl font-bold tracking-tight text-primary">That's That - Bootcamp Planner</h1>
-                    <ThemeToggle />
+                <div className="relative flex items-center justify-center h-16 px-4 max-w-md mx-auto w-full">
+                    {/* Logo on the left */}
+                    <div className="absolute left-4 flex items-center">
+                        <img src="/logo.jpg" alt="Logo" className="w-12 h-12 rounded-md object-contain" />
+                    </div>
+
+                    {/* Centered Text */}
+                    <h1 className="text-xl font-bold tracking-tight text-primary">
+                        Bootcamp Planner
+                    </h1>
+
+                    {/* Theme Toggle on the right */}
+                    <div className="absolute right-4">
+                        <ThemeToggle />
+                    </div>
                 </div>
             </header>
 
