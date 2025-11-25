@@ -114,218 +114,201 @@ export function GeneratorPage() {
     // Display either the saved workout, pending generated one, or custom plan
     const displayExercises = isCustomMode ? customStops : (generatedExercises || (workout ? workout.exercises : null));
     const isPending = !!generatedExercises || isCustomMode;
+                        </div >
+                    </div >
+        <button
+            onClick={() => handleDateChange(1)}
+            className="p-2 hover:bg-muted rounded-full transition-colors"
+        >
+            <ChevronRight className="w-6 h-6" />
+        </button>
+                </div >
 
-    return (
-        <>
-            <div className="space-y-6">
-                {/* Date Picker */}
-                <div className="flex items-center justify-between p-4 bg-card rounded-xl border shadow-sm">
-                    <button
-                        onClick={() => handleDateChange(-1)}
-                        className="p-2 hover:bg-muted rounded-full transition-colors"
-                    >
-                        <ChevronLeft className="w-6 h-6" />
-                    </button>
-                    <div className="text-center">
-                        <div className="text-sm text-muted-foreground uppercase font-semibold tracking-wider">
-                            {format(selectedDate, 'EEEE')}
-                        </div>
-                        <div className="text-2xl font-bold">
-                            {format(selectedDate, 'MMM d')}
-                        </div>
+        {/* Main Content */ }
+        < div className = "space-y-4" >
+            {!displayExercises ? (
+                <div className="text-center py-12 space-y-4">
+                    <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
+                        <Dumbbell className="w-8 h-8 text-muted-foreground" />
                     </div>
-                    <button
-                        onClick={() => handleDateChange(1)}
-                        className="p-2 hover:bg-muted rounded-full transition-colors"
-                    >
-                        <ChevronRight className="w-6 h-6" />
-                    </button>
+                    <p className="text-muted-foreground">No workout planned for this day.</p>
+                    <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
+                        <button
+                            onClick={handleGenerate}
+                            disabled={isLoading}
+                            className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                        >
+                            {isLoading ? "Generating..." : "Generate Workout"}
+                        </button>
+                        <button
+                            onClick={() => setIsCustomMode(true)}
+                            disabled={isLoading}
+                            className="w-full py-3 bg-muted text-foreground rounded-xl font-semibold text-base hover:bg-muted/80 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                        >
+                            <Plus className="w-5 h-5" />
+                            Create Custom Plan
+                        </button>
+                    </div>
                 </div>
+            ) : (
+                <>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold">
+                            {isPending ? (isCustomMode ? "Custom Plan" : "Preview Workout") : "Planned Workout"}
+                        </h2>
+                        {isSaved && !isPending && (
+                            <span className="flex items-center text-green-500 text-sm font-medium bg-green-500/10 px-3 py-1 rounded-full">
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Saved
+                            </span>
+                        )}
+                    </div>
 
-                {/* Main Content */}
-                <div className="space-y-4">
-                    {!displayExercises ? (
-                        <div className="text-center py-12 space-y-4">
-                            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
-                                <Dumbbell className="w-8 h-8 text-muted-foreground" />
-                            </div>
-                            <p className="text-muted-foreground">No workout planned for this day.</p>
-                            <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
-                                <button
-                                    onClick={handleGenerate}
-                                    disabled={isLoading}
-                                    className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-bold text-lg shadow-lg hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                                >
-                                    {isLoading ? "Generating..." : "Generate Workout"}
-                                </button>
-                                <button
-                                    onClick={() => setIsCustomMode(true)}
-                                    disabled={isLoading}
-                                    className="w-full py-3 bg-muted text-foreground rounded-xl font-semibold text-base hover:bg-muted/80 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
-                                >
-                                    <Plus className="w-5 h-5" />
-                                    Create Custom Plan
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-lg font-semibold">
-                                    {isPending ? (isCustomMode ? "Custom Plan" : "Preview Workout") : "Planned Workout"}
-                                </h2>
-                                {isSaved && !isPending && (
-                                    <span className="flex items-center text-green-500 text-sm font-medium bg-green-500/10 px-3 py-1 rounded-full">
-                                        <CheckCircle className="w-4 h-4 mr-1" />
-                                        Saved
-                                    </span>
-                                )}
-                            </div>
+                    <div className="space-y-4">
+                        {displayExercises.map((stop, idx) => {
+                            // Handle legacy data format (if any old workouts exist without 'waiting' key)
+                            const isLegacy = !stop.waiting && !isCustomMode;
 
-                            <div className="space-y-4">
-                                {displayExercises.map((stop, idx) => {
-                                    // Handle legacy data format (if any old workouts exist without 'waiting' key)
-                                    const isLegacy = !stop.waiting && !isCustomMode;
+                            if (isLegacy) {
+                                return (
+                                    <div key={stop.id || idx} className="p-4 rounded-xl border bg-card text-muted-foreground">
+                                        Legacy Workout Format (Regenerate to update)
+                                    </div>
+                                );
+                            }
 
-                                    if (isLegacy) {
-                                        return (
-                                            <div key={stop.id || idx} className="p-4 rounded-xl border bg-card text-muted-foreground">
-                                                Legacy Workout Format (Regenerate to update)
-                                            </div>
-                                        );
-                                    }
+                            return (
+                                <div key={stop.id || idx} className="rounded-xl border bg-card overflow-hidden shadow-sm">
+                                    <div className="bg-muted/30 px-4 py-2 border-b flex justify-between items-center">
+                                        <span className="text-xs font-bold text-primary uppercase tracking-wider">
+                                            Stop {idx + 1}
+                                        </span>
+                                    </div>
 
-                                    return (
-                                        <div key={stop.id || idx} className="rounded-xl border bg-card overflow-hidden shadow-sm">
-                                            <div className="bg-muted/30 px-4 py-2 border-b flex justify-between items-center">
-                                                <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                                                    Stop {idx + 1}
+                                    {/* Waiting Exercise */}
+                                    {isCustomMode && !stop.waiting ? (
+                                        <button
+                                            onClick={() => openPicker(idx, 'waiting')}
+                                            className="w-full text-left p-4 border-b hover:bg-muted/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground border-dashed"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Select Waiting Exercise
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => isCustomMode ? openPicker(idx, 'waiting') : setSelectedExercise(stop.waiting)}
+                                            className="w-full text-left p-4 border-b hover:bg-muted/50 transition-colors flex justify-between items-start group"
+                                        >
+                                            <div>
+                                                <span className="text-[10px] font-bold text-orange-500/70 uppercase tracking-wider mb-0.5 block">
+                                                    Waiting
                                                 </span>
+                                                <h3 className="font-bold group-hover:text-primary transition-colors">{stop.waiting?.name}</h3>
                                             </div>
-
-                                            {/* Waiting Exercise */}
-                                            {isCustomMode && !stop.waiting ? (
-                                                <button
-                                                    onClick={() => openPicker(idx, 'waiting')}
-                                                    className="w-full text-left p-4 border-b hover:bg-muted/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground border-dashed"
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                    Select Waiting Exercise
-                                                </button>
+                                            {isCustomMode ? (
+                                                <RefreshCw className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                                             ) : (
-                                                <button
-                                                    onClick={() => isCustomMode ? openPicker(idx, 'waiting') : setSelectedExercise(stop.waiting)}
-                                                    className="w-full text-left p-4 border-b hover:bg-muted/50 transition-colors flex justify-between items-start group"
-                                                >
-                                                    <div>
-                                                        <span className="text-[10px] font-bold text-orange-500/70 uppercase tracking-wider mb-0.5 block">
-                                                            Waiting
-                                                        </span>
-                                                        <h3 className="font-bold group-hover:text-primary transition-colors">{stop.waiting?.name}</h3>
-                                                    </div>
-                                                    {isCustomMode ? (
-                                                        <RefreshCw className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                                                    ) : (
-                                                        <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                                                    )}
-                                                </button>
+                                                <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
                                             )}
-
-                                            {/* Main Exercise */}
-                                            {isCustomMode && !stop.main ? (
-                                                <button
-                                                    onClick={() => openPicker(idx, 'main')}
-                                                    className="w-full text-left p-4 hover:bg-muted/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground border-dashed"
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                    Select Main Exercise
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => isCustomMode ? openPicker(idx, 'main') : setSelectedExercise(stop.main)}
-                                                    className="w-full text-left p-4 hover:bg-muted/50 transition-colors flex justify-between items-start group"
-                                                >
-                                                    <div>
-                                                        <span className="text-[10px] font-bold text-blue-500/70 uppercase tracking-wider mb-0.5 block">
-                                                            Main
-                                                        </span>
-                                                        <h3 className="font-bold group-hover:text-primary transition-colors">{stop.main?.name}</h3>
-                                                        <p className="text-xs text-muted-foreground mt-1">{stop.main?.category}</p>
-                                                    </div>
-                                                    <div className="flex flex-col items-end gap-2">
-                                                        {isCustomMode ? (
-                                                            <RefreshCw className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                                                        ) : (
-                                                            <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
-                                                        )}
-                                                        {stop.main?.partnerExercise && (
-                                                            <div className="flex items-center text-pink-500 bg-pink-500/10 px-2 py-0.5 rounded text-[10px] font-bold">
-                                                                <Users className="w-3 h-3 mr-1" />
-                                                                Partner
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </button>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Actions */}
-                            <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto flex gap-3 z-10">
-                                {isPending ? (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                setGeneratedExercises(null);
-                                                setIsCustomMode(false);
-                                            }}
-                                            disabled={isLoading}
-                                            className="flex-1 py-3 bg-muted text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-muted/80 disabled:opacity-50"
-                                        >
-                                            <X className="w-5 h-5" />
-                                            Cancel
                                         </button>
-                                        <button
-                                            onClick={handleConfirm}
-                                            disabled={isLoading}
-                                            className="flex-[2] py-3 bg-primary text-primary-foreground rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50"
-                                        >
-                                            <Save className="w-5 h-5" />
-                                            {isLoading ? "Saving..." : "Confirm & Save"}
-                                        </button>
-                                    </>
-                                ) : (
-                                    <button
-                                        onClick={handleGenerate}
-                                        disabled={isLoading}
-                                        className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-muted/80 hover:text-foreground transition-colors disabled:opacity-50"
-                                    >
-                                        <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
-                                        Regenerate
-                                    </button>
-                                )}
-                            </div>
-                            {/* Spacer for fixed bottom buttons */}
-                            <div className="h-20" />
-                        </>
-                    )}
-                </div>
-            </div>
+                                    )}
 
-            {/* Modals */}
-            <ExerciseDetailModal
-                exercise={selectedExercise}
-                onClose={() => setSelectedExercise(null)}
+                                    {/* Main Exercise */}
+                                    {isCustomMode && !stop.main ? (
+                                        <button
+                                            onClick={() => openPicker(idx, 'main')}
+                                            className="w-full text-left p-4 hover:bg-muted/50 transition-colors flex items-center justify-center gap-2 text-muted-foreground border-dashed"
+                                        >
+                                            <Plus className="w-4 h-4" />
+                                            Select Main Exercise
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => isCustomMode ? openPicker(idx, 'main') : setSelectedExercise(stop.main)}
+                                            className="w-full text-left p-4 hover:bg-muted/50 transition-colors flex justify-between items-start group"
+                                        >
+                                            <div>
+                                                <span className="text-[10px] font-bold text-blue-500/70 uppercase tracking-wider mb-0.5 block">
+                                                    Main
+                                                </span>
+                                                <h3 className="font-bold group-hover:text-primary transition-colors">{stop.main?.name}</h3>
+                                                <p className="text-xs text-muted-foreground mt-1">{stop.main?.category}</p>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2">
+                                                {isCustomMode ? (
+                                                    <RefreshCw className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                                                ) : (
+                                                    <Info className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                                                )}
+                                                {stop.main?.partnerExercise && (
+                                                    <div className="flex items-center text-pink-500 bg-pink-500/10 px-2 py-0.5 rounded text-[10px] font-bold">
+                                                        <Users className="w-3 h-3 mr-1" />
+                                                        Partner
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="fixed bottom-20 left-4 right-4 max-w-md mx-auto flex gap-3 z-10">
+                        {isPending ? (
+                            <>
+                                <button
+                                    onClick={() => {
+                                        setGeneratedExercises(null);
+                                        setIsCustomMode(false);
+                                    }}
+                                    disabled={isLoading}
+                                    className="flex-1 py-3 bg-muted text-foreground rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-muted/80 disabled:opacity-50"
+                                >
+                                    <X className="w-5 h-5" />
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirm}
+                                    disabled={isLoading}
+                                    className="flex-[2] py-3 bg-primary text-primary-foreground rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50"
+                                >
+                                    <Save className="w-5 h-5" />
+                                    {isLoading ? "Saving..." : "Confirm & Save"}
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={handleGenerate}
+                                disabled={isLoading}
+                                className="w-full py-3 bg-muted text-muted-foreground rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-muted/80 hover:text-foreground transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+                                Regenerate
+                            </button>
+                        )}
+                    </div>
+                    {/* Spacer for fixed bottom buttons */}
+                    <div className="h-20" />
+                </>
+            )
+}
+                </div >
+            </div >
+
+    {/* Modals */ }
+    < ExerciseDetailModal
+exercise = { selectedExercise }
+onClose = {() => setSelectedExercise(null)}
             />
 
-            <ExercisePickerModal
-                isOpen={pickerState.isOpen}
-                onClose={() => setPickerState({ ...pickerState, isOpen: false })}
-                onSelect={handleExerciseSelect}
-                type={pickerState.type}
-            />
+    < ExercisePickerModal
+isOpen = { pickerState.isOpen }
+onClose = {() => setPickerState({ ...pickerState, isOpen: false })}
+onSelect = { handleExerciseSelect }
+type = { pickerState.type }
+    />
         </>
     );
 }
