@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import confetti from 'canvas-confetti';
 import { format, addDays, subDays, isSameDay, parseISO } from 'date-fns';
-import { ChevronLeft, ChevronRight, RefreshCw, Save, CheckCircle, Users, Info, Plus, Dumbbell, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Save, CheckCircle, Users, Info, Plus, Dumbbell, X, PartyPopper } from 'lucide-react';
 import { db } from '../services/db';
 import { cn } from '../lib/utils';
 import { ExerciseDetailModal } from '../components/ExerciseDetailModal';
@@ -124,6 +125,26 @@ export function GeneratorPage() {
         setPickerState({ isOpen: false, stopIndex: null, type: null });
     };
 
+    const handleFireworks = () => {
+        const duration = 3 * 1000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 50 };
+
+        const randomInRange = (min, max) => Math.random() * (max - min) + min;
+
+        const interval = setInterval(function () {
+            const timeLeft = animationEnd - Date.now();
+
+            if (timeLeft <= 0) {
+                return clearInterval(interval);
+            }
+
+            const particleCount = 50 * (timeLeft / duration);
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+    };
+
     // Display either the saved workout, pending generated one, or custom plan
     const displayExercises = isCustomMode ? customStops : (generatedExercises || (workout ? workout.exercises : null));
     const isPending = !!generatedExercises || isCustomMode;
@@ -172,6 +193,14 @@ export function GeneratorPage() {
                                 >
                                     <Plus className="w-5 h-5" />
                                     Create Custom Plan
+                                </button>
+                                <button
+                                    onClick={handleFireworks}
+                                    disabled={isLoading}
+                                    className="w-full py-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-xl font-semibold text-base hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 shadow-md"
+                                >
+                                    <PartyPopper className="w-5 h-5" />
+                                    Celebrate!
                                 </button>
                             </div>
                         </div>
